@@ -15,6 +15,7 @@ const getUsers = asyncHandler(async (req, res) => {
       role: true,
       password_set: true,
       invitation_sent: true,
+      invitation_token: true,
       source: true,
       createdAt: true
     }

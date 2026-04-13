@@ -193,10 +193,64 @@ const getAdminShuttleDrivers = asyncHandler(async (_req, res) => {
   res.json({ success: true, drivers: rows });
 });
 
+const getEtaPreview = asyncHandler(async (req, res) => {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({ success: false, message: 'ETA service is not configured' });
+  }
+
+  const originLat = Number(req.query.origin_lat);
+  const originLng = Number(req.query.origin_lng);
+  const destLat = Number(req.query.dest_lat);
+  const destLng = Number(req.query.dest_lng);
+  const destinationText = String(req.query.destination || '').trim();
+
+  if (!Number.isFinite(originLat) || !Number.isFinite(originLng)) {
+    return res.status(400).json({ success: false, message: 'origin_lat and origin_lng are required' });
+  }
+
+  const origin = `${originLat},${originLng}`;
+  let destination = '';
+  if (Number.isFinite(destLat) && Number.isFinite(destLng)) {
+    destination = `${destLat},${destLng}`;
+  } else if (destinationText) {
+    destination = destinationText;
+  } else {
+    return res.status(400).json({ success: false, message: 'destination or dest_lat/dest_lng is required' });
+  }
+
+  const url =
+    `https://maps.googleapis.com/maps/api/distancematrix/json?units=metric` +
+    `&origins=${encodeURIComponent(origin)}` +
+    `&destinations=${encodeURIComponent(destination)}` +
+    `&key=${encodeURIComponent(apiKey)}`;
+
+  try {
+    const raw = await fetch(url);
+    const data = await raw.json();
+    const element = data?.rows?.[0]?.elements?.[0];
+    if (element?.status !== 'OK') {
+      return res.status(200).json({ success: false, message: 'ETA unavailable', element_status: element?.status || null });
+    }
+    return res.json({
+      success: true,
+      eta: {
+        distance_text: element.distance?.text || null,
+        distance_meters: Number(element.distance?.value),
+        duration_text: element.duration?.text || null,
+        duration_seconds: Number(element.duration?.value),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'ETA lookup failed', error: error?.message || 'unknown' });
+  }
+});
+
 module.exports = {
   getShuttleLive,
   updateShift,
   updateTracking,
   updateLocation,
   getAdminShuttleDrivers,
+  getEtaPreview,
 };

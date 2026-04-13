@@ -24,6 +24,8 @@ app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/logs', require('./routes/logRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/sync', require('./routes/syncRoutes'));
+app.use('/api/shuttle', require('./routes/shuttleRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

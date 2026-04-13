@@ -5,6 +5,11 @@ const asyncHandler = require('express-async-handler');
 // @route   POST /api/bookings
 const createBooking = asyncHandler(async (req, res) => {
   const { trip_id, user_id, seats } = req.body;
+  const seatsToBook = Math.max(parseInt(seats, 10) || 0, 0);
+  if (!seatsToBook) {
+    res.status(400);
+    throw new Error('Invalid seat count');
+  }
 
   // Find trip first
   const trip = await prisma.trip.findUnique({
@@ -30,15 +35,18 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new Error('You already have a confirmed booking for this trip.');
   }
 
-  if (trip.seats_remaining < seats) {
-    res.status(400);
-    throw new Error('Not enough seats remaining');
-  }
-
-
-  // Create booking and decrease seats remaining in a transaction
-  const [booking, updatedTrip] = await prisma.$transaction([
-    prisma.booking.create({
+  // Atomic seat lock to prevent overbooking in concurrent requests.
+  const { booking, updatedTrip } = await prisma.$transaction(async (tx) => {
+    const seatLock = await tx.trip.updateMany({
+      where: { id: trip_id, seats_remaining: { gte: seatsToBook } },
+      data: {
+        seats_remaining: { decrement: seatsToBook },
+      },
+    });
+    if (seatLock.count === 0) {
+      throw new Error('Not enough seats remaining');
+    }
+    const created = await tx.booking.create({
       data: {
         trip_id,
         user_id,
@@ -46,19 +54,13 @@ const createBooking = asyncHandler(async (req, res) => {
         date: trip.date,
         origin: trip.origin,
         destination: trip.destination,
-        seats,
-        status: 'confirmed'
-      }
-    }),
-    prisma.trip.update({
-      where: { id: trip_id },
-      data: {
-        seats_remaining: {
-          decrement: seats
-        }
-      }
-    })
-  ]);
+        seats: seatsToBook,
+        status: 'confirmed',
+      },
+    });
+    const freshTrip = await tx.trip.findUnique({ where: { id: trip_id } });
+    return { booking: created, updatedTrip: freshTrip };
+  });
 
   res.status(201).json({ success: true, booking, updatedTrip });
 });

@@ -97,7 +97,11 @@ const login = asyncHandler(async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      phone: user.phone || '',
+      extra: user.extra || '',
+      special: user.special || '',
+      source: user.source || 'INTERNAL',
     },
     token
   });

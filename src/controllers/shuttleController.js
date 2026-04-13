@@ -172,7 +172,7 @@ const updateLocation = asyncHandler(async (req, res) => {
 
 const getAdminShuttleDrivers = asyncHandler(async (_req, res) => {
   const allUsers = await prisma.user.findMany({
-    select: { id: true, name: true, role: true },
+    select: { id: true, name: true, role: true, special: true, phone: true },
   });
   const drivers = allUsers.filter((u) => ['driver', 'staff'].includes(normalizeRole(u.role)));
   const rows = drivers.map((d) => {
@@ -181,6 +181,8 @@ const getAdminShuttleDrivers = asyncHandler(async (_req, res) => {
       id: d.id,
       name: d.name,
       role: d.role,
+      shuttle_id: d.special || null,
+      phone: d.phone || null,
       shift_active: s.shiftActive,
       tracking: s.trackingOn,
       paused: s.paused,

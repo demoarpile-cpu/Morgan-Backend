@@ -23,6 +23,31 @@ const getUsers = asyncHandler(async (req, res) => {
   res.json({ success: true, users });
 });
 
+// @desc    Get single user profile
+// @route   GET /api/users/:id
+const getUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      phone: true,
+      extra: true,
+      special: true,
+      source: true,
+      createdAt: true,
+    },
+  });
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+  res.json({ success: true, user });
+});
+
 // @desc    Update user profile
 // @route   PATCH /api/users/:id
 const updateUser = asyncHandler(async (req, res) => {
@@ -132,5 +157,15 @@ const markNotificationRead = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-module.exports = { getUsers, updateUser, deleteUser, getDestinations, addDestination, deleteDestination, getNotifications, markNotificationRead };
+module.exports = {
+  getUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getDestinations,
+  addDestination,
+  deleteDestination,
+  getNotifications,
+  markNotificationRead,
+};
 

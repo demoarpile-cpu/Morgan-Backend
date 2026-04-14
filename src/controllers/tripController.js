@@ -290,6 +290,19 @@ const updateLocation = asyncHandler(async (req, res) => {
 // @route   PATCH /api/trips/:id/start
 const startTrip = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const tripWithBookings = await prisma.trip.findUnique({
+    where: { id },
+    include: { bookings: true },
+  });
+  if (!tripWithBookings) {
+    res.status(404);
+    throw new Error('Trip not found');
+  }
+  const confirmedCount = (tripWithBookings.bookings || []).filter((b) => b.status === 'confirmed').length;
+  if (confirmedCount <= 0) {
+    res.status(400);
+    throw new Error('Cannot start trip without resident booking');
+  }
 
   const trip = await prisma.trip.update({
     where: { id },

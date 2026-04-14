@@ -47,6 +47,24 @@ const serializeLive = (session) => ({
   driver_name: session?.driverName || null,
 });
 
+const isFresh = (updatedAt, maxAgeMs) => {
+  if (!updatedAt) return false;
+  const ts = new Date(updatedAt).getTime();
+  if (!Number.isFinite(ts)) return false;
+  return Date.now() - ts <= maxAgeMs;
+};
+
+const getActiveLiveSessions = () => {
+  const sessions = [...driverSessions.values()];
+  return sessions.filter((s) => {
+    if (getStatus(s) !== LIVE_STATUS.ACTIVE) return false;
+    // Coordinates are required for map rendering.
+    if (!Number.isFinite(Number(s.lat)) || !Number.isFinite(Number(s.lng))) return false;
+    // Ignore stale points so OFF-duty/paused drivers are not shown as live forever.
+    return isFresh(s.updatedAt, 3 * 60 * 1000);
+  });
+};
+
 const getCurrentDriver = async (req) => {
   const authUser = getAuthUser(req);
   if (authUser?.id) {
@@ -61,34 +79,56 @@ const getCurrentDriver = async (req) => {
 };
 
 const getShuttleLive = asyncHandler(async (_req, res) => {
-  const sessions = [...driverSessions.values()];
-  const active = sessions.find((s) => s.shiftActive) || null;
-  if (active) {
-    return res.json({ success: true, live: serializeLive(active) });
+  const activeSessions = getActiveLiveSessions();
+  if (activeSessions.length > 0) {
+    const sorted = activeSessions.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    const allLive = sorted.map(serializeLive);
+    return res.json({ success: true, live: allLive[0], live_drivers: allLive.length, lives: allLive });
   }
-  const tripLive = await prisma.trip.findFirst({
-    where: { status: 'in_progress', lat: { not: null }, lng: { not: null } },
-    orderBy: { updatedAt: 'desc' },
-    select: { lat: true, lng: true, updatedAt: true, id: true },
-  });
-  if (tripLive) {
-    return res.json({
-      success: true,
-      live: {
-        status: LIVE_STATUS.ACTIVE,
-        shift_active: true,
-        tracking_on: true,
-        paused: false,
-        lat: tripLive.lat,
-        lng: tripLive.lng,
-        updated_at: tripLive.updatedAt,
-        trip_id: tripLive.id,
-      },
+
+  // Backward compatibility:
+  // if no in-memory sessions exist (e.g. server restart), serve only very fresh trip GPS.
+  const knownDrivers = driverSessions.size;
+  if (knownDrivers === 0) {
+    const tripLive = await prisma.trip.findFirst({
+      where: { status: 'in_progress', lat: { not: null }, lng: { not: null } },
+      orderBy: { updatedAt: 'desc' },
+      select: { lat: true, lng: true, updatedAt: true, id: true },
     });
+    if (tripLive && isFresh(tripLive.updatedAt, 2 * 60 * 1000)) {
+      return res.json({
+        success: true,
+        live: {
+          status: LIVE_STATUS.ACTIVE,
+          shift_active: true,
+          tracking_on: true,
+          paused: false,
+          lat: tripLive.lat,
+          lng: tripLive.lng,
+          updated_at: tripLive.updatedAt,
+          trip_id: tripLive.id,
+        },
+        live_drivers: 1,
+        lives: [
+          {
+            status: LIVE_STATUS.ACTIVE,
+            shift_active: true,
+            tracking_on: true,
+            paused: false,
+            lat: tripLive.lat,
+            lng: tripLive.lng,
+            updated_at: tripLive.updatedAt,
+            trip_id: tripLive.id,
+          },
+        ],
+      });
+    }
   }
   return res.json({
     success: true,
     live: { status: LIVE_STATUS.OFFLINE, shift_active: false, tracking_on: false, paused: false },
+    live_drivers: 0,
+    lives: [],
   });
 });
 

@@ -16,6 +16,8 @@ const getUsers = asyncHandler(async (req, res) => {
       password_set: true,
       invitation_sent: true,
       invitation_token: true,
+      status: true,
+      phone: true,
       source: true,
       createdAt: true
     }
@@ -52,9 +54,9 @@ const getUserById = asyncHandler(async (req, res) => {
 // @route   PATCH /api/users/:id
 const updateUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name, email, password, phone, extra, special } = req.body;
+  const { name, email, password, phone, extra, special, status } = req.body;
 
-  const data = { name, email, phone, extra, special };
+  const data = { name, email, phone, extra, special, status };
   if (password) {
     data.password = await bcrypt.hash(password, 10);
   }
@@ -65,6 +67,38 @@ const updateUser = asyncHandler(async (req, res) => {
   });
 
   res.json({ success: true, user });
+});
+
+// @desc    Update user status only
+// @route   PATCH /api/users/:id/status
+const updateUserStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  const user = await prisma.user.update({
+    where: { id },
+    data: { status }
+  });
+  
+  res.json({ success: true, user });
+});
+
+// @desc    Bulk Update user status
+// @route   POST /api/users/bulk-status
+const bulkUpdateStatus = asyncHandler(async (req, res) => {
+  const { ids, status } = req.body;
+  
+  if (!ids || !Array.isArray(ids)) {
+    res.status(400);
+    throw new Error('Invalid IDs array');
+  }
+
+  await prisma.user.updateMany({
+    where: { id: { in: ids } },
+    data: { status }
+  });
+  
+  res.json({ success: true, message: `Updated ${ids.length} users to ${status}` });
 });
 
 
@@ -161,6 +195,8 @@ module.exports = {
   getUsers,
   getUserById,
   updateUser,
+  updateUserStatus,
+  bulkUpdateStatus,
   deleteUser,
   getDestinations,
   addDestination,

@@ -71,6 +71,11 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // Security Logic Checks
+  if (user.status === 'INACTIVE') {
+    res.status(403);
+    throw new Error('Access Denied: Your account has been disabled by the administrator.');
+  }
+
   if (!user.invitation_sent) {
     res.status(403);
     throw new Error('Access Denied: You have not been invited to the app yet.');

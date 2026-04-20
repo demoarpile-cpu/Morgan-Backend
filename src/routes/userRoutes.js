@@ -4,6 +4,8 @@ const {
   getUsers, 
   getUserById,
   updateUser, 
+  updateUserStatus,
+  bulkUpdateStatus,
   deleteUser, 
   getDestinations, 
   addDestination, 
@@ -23,8 +25,10 @@ router.patch('/notifications/:id', markNotificationRead);
 
 // User Management
 router.get('/', getUsers);
+router.post('/bulk-status', bulkUpdateStatus); // Added bulk
 router.get('/:id', getUserById);
 router.patch('/:id', updateUser);
+router.patch('/:id/status', updateUserStatus); // Added specialized status
 router.delete('/:id', deleteUser);
 
 module.exports = router;

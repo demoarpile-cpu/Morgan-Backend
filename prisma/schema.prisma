@@ -18,6 +18,7 @@ model User {
   password         String?
   password_set     Boolean        @default(false)
   invitation_sent  Boolean        @default(false)
+  status           String         @default("ACTIVE")
   invitation_token String?        @unique
   token_expiry     DateTime?
   source           String         @default("INTERNAL") // PMS, INTERNAL

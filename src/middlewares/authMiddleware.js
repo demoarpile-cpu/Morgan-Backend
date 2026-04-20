@@ -3,6 +3,12 @@ const prisma = require('../utils/prisma');
 const asyncHandler = require('express-async-handler');
 
 const protect = asyncHandler(async (req, res, next) => {
+  // 1. Check for Internal Proxy Key (Server-to-Server)
+  const internalKey = req.headers['x-shuttle-proxy-key'];
+  if (internalKey && internalKey === (process.env.SHUTTLE_INTERNAL_KEY || 'shuttle_secret_123')) {
+    return next();
+  }
+
   let token;
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {

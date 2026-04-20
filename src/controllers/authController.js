@@ -2,6 +2,7 @@ const prisma = require('../utils/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
+const { getAuthUser } = require('../utils/authUser');
 
 // @desc    Internal Admin Creation of Driver/Admin staff
 // @route   POST /api/auth/internal-create
@@ -171,4 +172,29 @@ const forgotPassword = asyncHandler(async (req, res) => {
   res.json({ success: true, token, message: 'Reset token generated successfully' });
 });
 
-module.exports = { internalCreate, setupPassword, login, sendInvitation, forgotPassword };
+// @desc    Check if user is still active (Heartbeat)
+// @route   GET /api/auth/validate-status
+// @access  Private
+const validateStatus = asyncHandler(async (req, res) => {
+  const decoded = getAuthUser(req);
+  if (!decoded) {
+    res.status(401);
+    throw new Error('Not authorized, no token');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+  
+  if (!user) {
+    res.status(401);
+    throw new Error('User not found');
+  }
+
+  if (user.status === 'INACTIVE') {
+    res.status(401);
+    throw new Error('Account Disabled: Your access has been revoked by the admin.');
+  }
+
+  res.json({ success: true, status: user.status });
+});
+
+module.exports = { internalCreate, setupPassword, login, sendInvitation, forgotPassword, validateStatus };

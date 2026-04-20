@@ -27,6 +27,16 @@ app.use('/api/sync', require('./routes/syncRoutes'));
 app.use('/api/shuttle', require('./routes/shuttleRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {

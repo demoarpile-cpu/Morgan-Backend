@@ -40,10 +40,13 @@ const syncPMS = asyncHandler(async (req, res) => {
     let syncedCount = 0;
 
     for (const person of mastekoData) {
-      // Mapping logic:
-      // INDIVIDUAL -> tenant
-      // RESIDENT -> occupant (we mark as tenant but maybe add note)
-      
+      // --- FIXED: Only sync Individuals and Residents (skip Companies, etc.) ---
+      if (person.type !== 'INDIVIDUAL' && person.type !== 'RESIDENT') {
+        process.stdout.write(`⏭️ Skipping ${person.type}: ${person.name}\n`);
+        continue;
+      }
+      // -------------------------------------------------------------------------
+
       const personId = person.id || person._id || person.uid || Math.random().toString(36).substr(2, 9);
       const email = person.email || `pms-${personId}@morgan.com`; // Unique fallback
       const role = 'tenant'; // Everyone becomes a tenant in our system

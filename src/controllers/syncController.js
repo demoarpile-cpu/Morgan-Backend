@@ -9,10 +9,16 @@ const asyncHandler = require('express-async-handler');
  */
 const syncPMS = asyncHandler(async (req, res) => {
   try {
+    const { pmsId, apiKey } = req.body;
+
+    if (!pmsId || !apiKey) {
+      return res.status(400).json({ success: false, message: 'Please provide both PMS ID and API Key.' });
+    }
+
     const MASTEKO_URL = 'https://saif-property-client-railway-production.up.railway.app';
     const LOGIN_PAYLOAD = {
-      email: 'admin@property.com',
-      password: '123456'
+      email: pmsId,
+      password: apiKey
     };
 
     console.log('🔄 Logging into Masteko...');

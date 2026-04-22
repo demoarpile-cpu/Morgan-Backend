@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/authMiddleware');
 const { getTrips, createTrip, createRequest, getRequests, updateTrip, deleteTrip, approveRequest, deleteRequest, rejectRequest, updateLocation, startTrip } = require('../controllers/tripController');
+const { getLocations, addLocation, updateLocation: editDest, deleteLocation } = require('../controllers/locationController');
+
+// Location Routes
+router.get('/locations', protect, getLocations);
+router.post('/locations', protect, addLocation);
+router.put('/locations/:id', protect, editDest);
+router.delete('/locations/:id', protect, deleteLocation);
 
 // Standard Routes
 router.get('/', protect, getTrips);

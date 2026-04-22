@@ -57,6 +57,7 @@ model Trip {
   seats_remaining Int       @default(7)
   status          String    @default("scheduled") // scheduled, completed, cancelled, in_progress
   is_special      Boolean   @default(false)
+  is_recurring    Boolean   @default(false)
   tenant_name     String?
   lat               Float?    // Current latitude for live tracking
   lng               Float?    // Current longitude for live tracking

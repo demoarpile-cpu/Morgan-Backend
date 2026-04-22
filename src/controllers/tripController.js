@@ -29,7 +29,9 @@ const getUsersByRoles = async (targetRoles) => {
 const getTrips = asyncHandler(async (req, res) => {
   const { date } = req.query; // YYYY-MM-DD
   const trips = await prisma.trip.findMany({
-    where: date ? { date } : {},
+    where: date 
+      ? { OR: [{ date }, { is_recurring: true }] } 
+      : {},
     include: {
       bookings: {
         include: { user: true }
@@ -43,7 +45,7 @@ const getTrips = asyncHandler(async (req, res) => {
 // @desc    Create new trip (Admin Only)
 // @route   POST /api/trips
 const createTrip = asyncHandler(async (req, res) => {
-  const { time, date, origin, destination, seats_total, is_special, tenant_name } = req.body;
+  const { time, date, origin, destination, seats_total, is_special, tenant_name, is_recurring } = req.body;
 
   const trip = await prisma.trip.create({
     data: {
@@ -54,6 +56,7 @@ const createTrip = asyncHandler(async (req, res) => {
       seats_total,
       seats_remaining: seats_total,
       is_special: is_special || false,
+      is_recurring: is_recurring || false,
       tenant_name: tenant_name || null
     }
   });
@@ -107,12 +110,13 @@ const getRequests = asyncHandler(async (req, res) => {
 // @route   PATCH /api/trips/:id
 const updateTrip = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, actual_passengers, notes } = req.body;
+  const { status, actual_passengers, notes, is_recurring } = req.body;
 
   const trip = await prisma.trip.update({
     where: { id },
     data: {
       status,
+      is_recurring: is_recurring !== undefined ? is_recurring : undefined,
       actual_passengers: actual_passengers || undefined,
       notes: notes || undefined
     },

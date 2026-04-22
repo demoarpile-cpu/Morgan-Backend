@@ -1,4 +1,4 @@
-const prisma = require('../config/prisma');
+const prisma = require('../utils/prisma');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Get all shuttle locations

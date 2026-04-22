@@ -61,6 +61,7 @@ model Trip {
   tenant_name     String?
   lat               Float?    // Current latitude for live tracking
   lng               Float?    // Current longitude for live tracking
+  recurring_end_date String?  // New Field: For ending recurrences on a specific date
   actual_passengers Int?      // New Field: Logged at completion
   notes             String?   @db.Text // New Field: Driver's notes
   createdAt         DateTime  @default(now())

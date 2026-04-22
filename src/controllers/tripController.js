@@ -30,7 +30,19 @@ const getTrips = asyncHandler(async (req, res) => {
   const { date } = req.query; // YYYY-MM-DD
   const trips = await prisma.trip.findMany({
     where: date 
-      ? { OR: [{ date }, { is_recurring: true }] } 
+      ? { 
+          OR: [
+            { date }, 
+            { 
+              is_recurring: true,
+              date: { lte: date },
+              OR: [
+                { recurring_end_date: null },
+                { recurring_end_date: { gte: date } }
+              ]
+            }
+          ] 
+        } 
       : {},
     include: {
       bookings: {
@@ -110,13 +122,14 @@ const getRequests = asyncHandler(async (req, res) => {
 // @route   PATCH /api/trips/:id
 const updateTrip = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, actual_passengers, notes, is_recurring } = req.body;
+  const { status, actual_passengers, notes, is_recurring, recurring_end_date } = req.body;
 
   const trip = await prisma.trip.update({
     where: { id },
     data: {
       status,
       is_recurring: is_recurring !== undefined ? is_recurring : undefined,
+      recurring_end_date: recurring_end_date !== undefined ? recurring_end_date : undefined,
       actual_passengers: actual_passengers || undefined,
       notes: notes || undefined
     },

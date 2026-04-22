@@ -20,11 +20,18 @@ const addLocation = asyncHandler(async (req, res) => {
     throw new Error('Location name is required');
   }
 
-  const location = await prisma.destination.create({
-    data: { name }
-  });
-
-  res.status(201).json({ success: true, location });
+  try {
+    const location = await prisma.destination.create({
+      data: { name }
+    });
+    res.status(201).json({ success: true, location });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      res.status(400);
+      throw new Error('This location already exists');
+    }
+    throw error;
+  }
 });
 
 // @desc    Update shuttle location
@@ -33,12 +40,19 @@ const updateLocation = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
 
-  const location = await prisma.destination.update({
-    where: { id },
-    data: { name }
-  });
-
-  res.json({ success: true, location });
+  try {
+    const location = await prisma.destination.update({
+      where: { id },
+      data: { name }
+    });
+    res.json({ success: true, location });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      res.status(400);
+      throw new Error('Another location already has this name');
+    }
+    throw error;
+  }
 });
 
 // @desc    Delete shuttle location
